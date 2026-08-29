@@ -73,7 +73,16 @@ function decodeDeep<T>(value: T): T {
 
 // Empty in dev: vite proxies /api to the API server. Set VITE_API_URL when the two are
 // deployed to different origins.
-const BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
+//
+// A schemeless value ("api.example.com") is the easy mistake: the browser resolves it as a
+// relative path and every call 404s against the player's own origin. Force a scheme.
+const normaliseBase = (raw: string | undefined) => {
+  const value = raw?.trim().replace(/\/+$/, '')
+  if (!value) return ''
+  return /^https?:\/\//.test(value) ? value : `https://${value}`
+}
+
+const BASE = normaliseBase(import.meta.env.VITE_API_URL)
 
 async function get<T>(path: string, params: Record<string, string | number> = {}): Promise<T> {
   const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))

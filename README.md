@@ -86,10 +86,12 @@ execution to `bom1` (Mumbai) — the closest region to JioSaavn's own infrastruc
 | Framework Preset | Vite (auto-detected) |
 | Build Command | `bun run build` |
 | Output Directory | `dist` |
-| Environment | `VITE_API_URL` = the API project's URL |
+| Environment | `VITE_API_URL` = the API project's URL, **with scheme** (`https://jsaud-api.vercel.app`) |
 
 Without `VITE_API_URL` the player calls `/api` on its own origin and every request 404s — the Vite
-proxy that makes this work locally does not exist in a production build.
+proxy that makes this work locally does not exist in a production build. A value without `https://`
+used to fail the same way, silently, because the browser resolved it as a relative path; the client
+now prepends the scheme if you leave it off.
 
 ### Notes
 
