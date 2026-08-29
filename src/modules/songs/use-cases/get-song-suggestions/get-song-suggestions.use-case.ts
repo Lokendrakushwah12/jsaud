@@ -38,11 +38,12 @@ export class GetSongSuggestionsUseCase implements IUseCase<GetSongSuggestionsArg
 
     const { stationid, ...suggestions } = data
 
-    return (
-      Object.values(suggestions)
-        .map((element) => element && createSongPayload(element.song))
-        .filter(Boolean)
-        .slice(0, limit) || []
-    )
+    // A station with nothing left answers `{ stationid, error: 'No new' }`, and any
+    // future non-song key would land here too — so keep only entries carrying a song
+    // rather than mapping first and filtering the wreckage afterwards.
+    return Object.values(suggestions)
+      .filter((element) => element && typeof element === 'object' && 'song' in element && element.song)
+      .map((element) => createSongPayload(element.song))
+      .slice(0, limit)
   }
 }
