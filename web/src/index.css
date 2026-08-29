@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* Inter v4 with the optical-size axis (14-32). The default index.css of this package
+   is weight-only; opsz.css is the build that carries the axis. */
+@import '@fontsource-variable/inter/opsz.css';
 
 @theme {
   --color-bg: #000000;
@@ -6,7 +9,7 @@
   --color-elevated: #1f1f1f;
   --color-accent: #1ed760;
   --color-muted: #a7a7a7;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
@@ -17,6 +20,9 @@
   }
   body {
     @apply bg-bg text-white antialiased;
+    /* Let the browser drive opsz from the rendered size: tighter spacing and thinner
+       hairlines on the big headings, more open shapes on 12px labels. */
+    font-optical-sizing: auto;
   }
   ::-webkit-scrollbar {
     width: 12px;
