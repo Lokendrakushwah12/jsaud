@@ -33,6 +33,15 @@ export class App {
     this.app.use(logger())
     this.app.use(prettyJSON())
     this.app.use(cors())
+
+    // Let any CDN in front of us absorb repeat traffic; JioSaavn rate-limits by IP,
+    // so the cheapest upstream call is the one a cache answers instead.
+    this.app.use('/api/*', async (ctx, next) => {
+      await next()
+      if (ctx.res.ok) {
+        ctx.res.headers.set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=600')
+      }
+    })
   }
 
   private initializeSwaggerUI() {
@@ -47,8 +56,8 @@ export class App {
           version: '1.0.0',
           title: 'JioSaavn API',
           description: `# Introduction 
-        \nJioSaavn API, accessible at [saavn.dev](https://saavn.dev), is an unofficial API that allows users to download high-quality songs from [JioSaavn](https://jiosaavn.com). 
-        It offers a fast, reliable, and easy-to-use API for developers. \n`
+        \nAn unofficial API for [JioSaavn](https://jiosaavn.com), returning songs, albums, artists, playlists and the browse feeds as JSON. 
+        A fork of [sumitkolhe/jiosaavn-api](https://github.com/sumitkolhe/jiosaavn-api). \n`
         },
         servers: [{ url: `${protocol}//${hostname}${port ? `:${port}` : ''}`, description: 'Current environment' }]
       }
@@ -78,7 +87,7 @@ export class App {
 
   private initializeRouteFallback() {
     this.app.notFound((ctx) => {
-      return ctx.json({ success: false, message: 'route not found, check docs at https://saavn.dev/docs' }, 404)
+      return ctx.json({ success: false, message: 'route not found, check the docs at /docs' }, 404)
     })
   }
 
