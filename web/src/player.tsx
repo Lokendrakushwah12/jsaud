@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { getSuggestions, names, streamUrl, type Song } from './api'
+import { getSuggestions, names, streamUrl, type Quality, type Song } from './api'
 
 type PlayerState = {
   queue: Song[]
@@ -11,7 +11,9 @@ type PlayerState = {
   volume: number
   shuffle: boolean
   repeat: boolean
+  quality: Quality
   play: (songs: Song[], startAt?: number) => void
+  jumpTo: (index: number) => void
   toggle: () => void
   next: () => void
   prev: () => void
@@ -19,6 +21,7 @@ type PlayerState = {
   setVolume: (v: number) => void
   setShuffle: (fn: (s: boolean) => boolean) => void
   setRepeat: (fn: (r: boolean) => boolean) => void
+  setQuality: (q: Quality) => void
 }
 
 const Ctx = createContext<PlayerState | null>(null)
@@ -42,8 +45,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolumeState] = useState(0.8)
   const [shuffle, setShuffle] = useState(false)
   const [repeat, setRepeat] = useState(false)
+  const [quality, setQualityState] = useState<Quality>(
+    () => (localStorage.getItem('saavn.quality') as Quality | null) ?? '320kbps'
+  )
   const current = queue[index] ?? null
   const loading = useRef(false)
+  const loadedId = useRef('')
 
   const play = useCallback((songs: Song[], startAt = 0) => {
     setQueue(songs)
@@ -92,12 +99,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     else audio.pause()
   }, [audio, current])
 
-  // Load the track whenever the selection changes.
+  // Load the track whenever the selection or the chosen bitrate changes. Switching
+  // bitrate re-loads the same song, so keep the listener's place; a new song starts at 0.
   useEffect(() => {
     if (!current) return
-    audio.src = streamUrl(current)
+    const next = streamUrl(current, quality)
+    if (audio.src === next) return
+
+    const resumeAt = loadedId.current === current.id ? audio.currentTime : 0
+    loadedId.current = current.id
+    audio.src = next
+
+    if (resumeAt) {
+      // currentTime only sticks once the new source has metadata.
+      audio.addEventListener('loadedmetadata', () => (audio.currentTime = resumeAt), { once: true })
+    }
+
     void audio.play().catch(() => setPlaying(false))
-  }, [audio, current])
+  }, [audio, current, quality])
 
   useEffect(() => {
     audio.volume = volume
@@ -142,13 +161,33 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement
-      if (e.code !== 'Space' || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return
-      e.preventDefault()
-      toggle()
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault()
+          toggle()
+          break
+        case 'ArrowRight':
+          audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10)
+          break
+        case 'ArrowLeft':
+          audio.currentTime = Math.max(0, audio.currentTime - 10)
+          break
+        case 'KeyN':
+          next()
+          break
+        case 'KeyP':
+          prev()
+          break
+        case 'KeyM':
+          audio.muted = !audio.muted
+          break
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [toggle])
+  }, [audio, next, prev, toggle])
 
   const value: PlayerState = {
     queue,
@@ -164,6 +203,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     toggle,
     next,
     prev,
+    quality,
+    jumpTo: (i) => setIndex(i),
+    setQuality: (q) => {
+      localStorage.setItem('saavn.quality', q)
+      setQualityState(q)
+    },
     seek: (s) => {
       audio.currentTime = s
       setProgress(s)

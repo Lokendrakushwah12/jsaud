@@ -1,6 +1,7 @@
-import { Heart, ListMusic, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react'
+import { Heart, ListMusic, Pause, Play, Repeat, Settings2, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { art, fmt, names, type Song } from './api'
+import { art, fmt, names, QUALITIES, type Quality, type Song } from './api'
 import { usePlayer } from './player'
 
 const SLIDER =
@@ -106,6 +107,7 @@ export function Card({
   return (
     <button
       onClick={onOpen}
+      aria-label={`${title} — ${subtitle}`}
       className="group flex flex-col gap-3 rounded-lg p-3 text-left transition hover:bg-elevated"
     >
       <div className="relative">
@@ -142,7 +144,72 @@ export const Shelf = ({ title, children }: { title: string; children: ReactNode 
   </section>
 )
 
-export function PlayerBar() {
+export function Queue({ onClose }: { onClose: () => void }) {
+  const { queue, index, jumpTo, current } = usePlayer()
+
+  return (
+    <aside className="flex w-80 shrink-0 flex-col rounded-lg bg-panel p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-bold">Queue</h2>
+        <button onClick={onClose} className="text-sm text-muted hover:text-white">
+          Close
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {queue.length === 0 && <p className="text-sm text-muted">Nothing queued yet.</p>}
+        {queue.map((song, i) => (
+          <button
+            key={`${song.id}-${i}`}
+            onClick={() => jumpTo(i)}
+            aria-label={`Play ${song.name} by ${names(song.artists?.primary)}`}
+            className={`flex w-full items-center gap-3 rounded p-2 text-left hover:bg-elevated ${i < index ? 'opacity-50' : ''}`}
+          >
+            <img src={art(song.image, 1)} alt="" className="size-10 rounded" loading="lazy" />
+            <div className="min-w-0">
+              <div className={`truncate text-sm ${current?.id === song.id ? 'text-accent' : ''}`}>{song.name}</div>
+              <div className="truncate text-xs text-muted">{names(song.artists?.primary)}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </aside>
+  )
+}
+
+function QualityPicker() {
+  const { quality, setQuality } = usePlayer()
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Audio quality"
+        className={open ? 'text-accent' : 'text-muted hover:text-white'}
+      >
+        <Settings2 size={16} />
+      </button>
+      {open && (
+        <div className="absolute right-0 bottom-8 z-20 w-36 rounded-md bg-elevated p-1 shadow-xl">
+          {QUALITIES.map((q: Quality) => (
+            <button
+              key={q}
+              onClick={() => {
+                setQuality(q)
+                setOpen(false)
+              }}
+              className={`block w-full rounded px-3 py-1.5 text-left text-sm hover:bg-white/10 ${q === quality ? 'text-accent' : ''}`}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function PlayerBar({ onToggleQueue, queueOpen }: { onToggleQueue: () => void; queueOpen: boolean }) {
   const p = usePlayer()
   const song = p.current
   const VolIcon = p.volume === 0 ? VolumeX : p.volume < 0.5 ? Volume1 : Volume2
@@ -193,7 +260,14 @@ export function PlayerBar() {
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <ListMusic size={16} className="text-muted hover:text-white" />
+        <QualityPicker />
+        <button
+          onClick={onToggleQueue}
+          aria-label="Queue"
+          className={queueOpen ? 'text-accent' : 'text-muted hover:text-white'}
+        >
+          <ListMusic size={16} />
+        </button>
         <VolIcon size={16} className="text-muted" />
         <Slider value={p.volume} max={1} onChange={p.setVolume} className="max-w-24" />
       </div>

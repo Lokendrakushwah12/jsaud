@@ -25,6 +25,24 @@ export type Album = {
   songs?: Song[]
 }
 
+export type BrowseEntity = {
+  id: string
+  name: string
+  subtitle: string | null
+  type: string
+  url: string | null
+  language: string | null
+  explicitContent: boolean
+  image: Img[]
+}
+
+export type BrowseModules = {
+  trending: BrowseEntity[]
+  newAlbums: BrowseEntity[]
+  charts: BrowseEntity[]
+  topPlaylists: BrowseEntity[]
+}
+
 export type Artist = {
   id: string
   name: string
@@ -53,9 +71,13 @@ function decodeDeep<T>(value: T): T {
   return value
 }
 
+// Empty in dev: vite proxies /api to the API server. Set VITE_API_URL when the two are
+// deployed to different origins.
+const BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
+
 async function get<T>(path: string, params: Record<string, string | number> = {}): Promise<T> {
   const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))
-  const res = await fetch(`/api${path}?${qs}`)
+  const res = await fetch(`${BASE}/api${path}?${qs}`)
   if (!res.ok) throw new Error(`${res.status} ${path}`)
   const { data } = await res.json()
   return decodeDeep(data) as T
@@ -69,9 +91,18 @@ export const searchArtists = (query: string, limit = 12) => get<Page<Artist>>('/
 export const getAlbum = (id: string) => get<Album>('/albums', { id })
 export const getArtist = (id: string) => get<Artist>(`/artists/${id}`, { songCount: 10, albumCount: 20 })
 export const getSuggestions = (id: string, limit = 10) => get<Song[]>(`/songs/${id}/suggestions`, { limit })
+export const getSong = (id: string) => get<Song[]>(`/songs/${id}`).then((songs) => songs[0])
+// Playlists come back in the same shape as albums, so they render through the same page.
+export const getPlaylist = (id: string) => get<Album>('/playlists', { id, limit: 100 })
+export const getTrending = (limit = 20) => get<BrowseEntity[]>('/trending', { limit })
+export const getModules = (limit = 12) => get<BrowseModules>('/modules', { limit })
 
-/** Highest available bitrate — the API returns qualities ascending. */
-export const streamUrl = (song: Song) => song.downloadUrl.at(-1)?.url ?? ''
+export const QUALITIES = ['96kbps', '160kbps', '320kbps'] as const
+export type Quality = (typeof QUALITIES)[number]
+
+/** Falls back to the highest available bitrate when a song lacks the requested one. */
+export const streamUrl = (song: Song, quality?: Quality) =>
+  (quality && song.downloadUrl.find((d) => d.quality === quality)?.url) || song.downloadUrl.at(-1)?.url || ''
 export const art = (images: Img[] | undefined, i = -1) => images?.at(i)?.url ?? ''
 export const names = (refs: Ref[] | undefined) => refs?.map((r) => r.name).filter(Boolean).join(', ') ?? ''
 

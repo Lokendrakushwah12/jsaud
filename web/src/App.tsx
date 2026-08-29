@@ -1,9 +1,9 @@
 import { ChevronLeft, ChevronRight, Home as HomeIcon, Library, Music2, Search as SearchIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { art, names, type Song } from './api'
-import { PlayerBar } from './components'
+import { PlayerBar, Queue } from './components'
 import { PlayerProvider, usePlayer } from './player'
-import { AlbumPage, ArtistPage, Home, Search, type View } from './views'
+import { AlbumPage, ArtistPage, Home, PlaylistPage, Search, type View } from './views'
 
 const RECENTS_KEY = 'saavn.recents'
 
@@ -12,6 +12,7 @@ function Shell() {
   const [stack, setStack] = useState<View[]>([{ kind: 'home' }])
   const [pos, setPos] = useState(0)
   const [query, setQuery] = useState('')
+  const [queueOpen, setQueueOpen] = useState(false)
   const [recents, setRecents] = useState<Song[]>(() => JSON.parse(localStorage.getItem(RECENTS_KEY) ?? '[]'))
   const main = useRef<HTMLElement>(null)
   const view = stack[pos]
@@ -36,6 +37,17 @@ function Shell() {
   useEffect(() => {
     main.current?.scrollTo({ top: 0 })
   }, [pos, view])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement
+      if (e.key !== '/' || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return
+      e.preventDefault()
+      document.getElementById('q')?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     if (!current) return
@@ -76,6 +88,7 @@ function Shell() {
                 <button
                   key={s.id}
                   onClick={() => play([s])}
+                  aria-label={`Play ${s.name}`}
                   className="flex w-full items-center gap-3 rounded p-2 text-left hover:bg-elevated"
                 >
                   <img src={art(s.image, 1)} alt="" className="size-10 rounded" />
@@ -123,9 +136,12 @@ function Shell() {
           {view.kind === 'search' && <Search query={view.query} go={go} />}
           {view.kind === 'album' && <AlbumPage id={view.id} />}
           {view.kind === 'artist' && <ArtistPage id={view.id} go={go} />}
+          {view.kind === 'playlist' && <PlaylistPage id={view.id} />}
         </main>
+
+        {queueOpen && <Queue onClose={() => setQueueOpen(false)} />}
       </div>
-      <PlayerBar />
+      <PlayerBar onToggleQueue={() => setQueueOpen((o) => !o)} queueOpen={queueOpen} />
     </div>
   )
 }

@@ -5,18 +5,27 @@ import {
   compact,
   getAlbum,
   getArtist,
+  getModules,
+  getPlaylist,
+  getSong,
   names,
   searchAlbums,
   searchArtists,
   searchSongs,
   type Album,
   type Artist,
+  type BrowseEntity,
   type Song
 } from './api'
 import { Card, Shelf, SongRow } from './components'
 import { usePlayer } from './player'
 
-export type View = { kind: 'home' } | { kind: 'search'; query: string } | { kind: 'album'; id: string } | { kind: 'artist'; id: string }
+export type View =
+  | { kind: 'home' }
+  | { kind: 'search'; query: string }
+  | { kind: 'album'; id: string }
+  | { kind: 'artist'; id: string }
+  | { kind: 'playlist'; id: string }
 
 /** One tiny fetch-on-change hook — replaces a data library we do not need. */
 function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
@@ -47,34 +56,57 @@ const artistCard = (a: Artist, open: () => void) => (
 
 const Loading = () => <div className="p-8 text-muted">Loading…</div>
 
-const MOODS = [
-  { label: 'Bollywood Hits', from: 'from-rose-600' },
-  { label: 'Punjabi', from: 'from-amber-500' },
-  { label: 'Lo-fi', from: 'from-violet-600' },
-  { label: 'Arijit Singh', from: 'from-emerald-600' },
-  { label: 'Workout', from: 'from-sky-600' },
-  { label: 'Romantic', from: 'from-fuchsia-600' },
-  { label: '90s', from: 'from-orange-600' },
-  { label: 'Tamil', from: 'from-teal-600' }
-]
+/** Trending mixes songs, albums and playlists, so each card routes by its own type. */
+const entityCard = (
+  entity: BrowseEntity,
+  go: (v: View) => void,
+  play: (songs: Song[], startAt?: number) => void
+) => {
+  const open = () => {
+    if (entity.type === 'album') go({ kind: 'album', id: entity.id })
+    else if (entity.type === 'playlist') go({ kind: 'playlist', id: entity.id })
+    else if (entity.type === 'artist') go({ kind: 'artist', id: entity.id })
+    else void getSong(entity.id).then((song) => song && play([song]))
+  }
+
+  return (
+    <Card
+      key={`${entity.type}-${entity.id}`}
+      image={art(entity.image)}
+      title={entity.name}
+      subtitle={entity.subtitle || entity.type}
+      round={entity.type === 'artist'}
+      onOpen={open}
+    />
+  )
+}
 
 export function Home({ go }: { go: (v: View) => void }) {
+  const { play } = usePlayer()
+  const { data, loading } = useAsync(() => getModules(12), [])
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+
+  if (loading) return <Loading />
+
+  const shelves: [string, BrowseEntity[]][] = [
+    ['Trending now', data?.trending ?? []],
+    ['New releases', data?.newAlbums ?? []],
+    ['Charts', data?.charts ?? []],
+    ['Top playlists', data?.topPlaylists ?? []]
+  ]
+
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold tracking-tight">{greeting}</h1>
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {MOODS.map((m) => (
-          <button
-            key={m.label}
-            onClick={() => go({ kind: 'search', query: m.label })}
-            className={`flex h-24 items-end rounded-lg bg-gradient-to-br ${m.from} to-black/60 p-4 text-left text-lg font-bold transition hover:brightness-110`}
-          >
-            {m.label}
-          </button>
+      {!data && <p className="mt-4 text-muted">Could not load the browse feed. Is the API running on :3001?</p>}
+      {shelves
+        .filter(([, items]) => items.length > 0)
+        .map(([title, items]) => (
+          <Shelf key={title} title={title}>
+            {items.map((entity) => entityCard(entity, go, play))}
+          </Shelf>
         ))}
-      </div>
     </div>
   )
 }
@@ -176,6 +208,26 @@ export function AlbumPage({ id }: { id: string }) {
         onPlay={() => songs.length && play(songs, 0)}
       />
       {trackList(songs, play, false)}
+    </>
+  )
+}
+
+export function PlaylistPage({ id }: { id: string }) {
+  const { play } = usePlayer()
+  const { data, loading } = useAsync<Album>(() => getPlaylist(id), [id])
+  if (loading) return <Loading />
+  if (!data) return <div className="p-8 text-muted">Playlist not found.</div>
+  const songs = data.songs ?? []
+  return (
+    <>
+      <Header
+        kind="Playlist"
+        title={data.name}
+        image={art(data.image)}
+        meta={[data.description, `${songs.length} songs`].filter(Boolean).join(' • ')}
+        onPlay={() => songs.length && play(songs, 0)}
+      />
+      {trackList(songs, play)}
     </>
   )
 }
