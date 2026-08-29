@@ -84,8 +84,10 @@ const entityCard = (
 export function Home({ go }: { go: (v: View) => void }) {
   const { play } = usePlayer()
   const { data, loading } = useAsync(() => getModules(12), [])
+  // Browser-local hour, so this follows whoever is looking at it.
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const greeting =
+    hour < 5 ? 'Good evening' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   if (loading) return <Loading />
 
