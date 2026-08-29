@@ -130,7 +130,7 @@ export function Card({
         )}
       </div>
       <div className="min-w-0">
-        <div className="truncate font-semibold">{title}</div>
+        <div className="truncate font-medium">{title}</div>
         <div className="truncate text-sm text-muted">{subtitle}</div>
       </div>
     </button>
@@ -139,7 +139,7 @@ export function Card({
 
 export const Shelf = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="mt-8">
-    <h2 className="mb-2 px-3 text-2xl font-bold tracking-tight">{title}</h2>
+    <h2 className="mb-2 px-3 text-2xl font-semibold tracking-tight">{title}</h2>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">{children}</div>
   </section>
 )
@@ -150,7 +150,7 @@ export function Queue({ onClose }: { onClose: () => void }) {
   return (
     <aside className="flex w-80 shrink-0 flex-col rounded-lg bg-panel p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-bold">Queue</h2>
+        <h2 className="font-semibold">Queue</h2>
         <button onClick={onClose} className="text-sm text-muted hover:text-white">
           Close
         </button>

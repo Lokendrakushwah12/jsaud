@@ -59,7 +59,7 @@ function Shell() {
   }, [current])
 
   const navBtn = (active: boolean) =>
-    `flex w-full items-center gap-4 rounded px-2 py-1.5 font-bold transition ${active ? 'text-white' : 'text-muted hover:text-white'}`
+    `flex w-full items-center gap-4 rounded px-2 py-1.5 font-medium transition ${active ? 'text-white' : 'text-muted hover:text-white'}`
 
   return (
     <div className="flex h-full flex-col bg-black">
@@ -68,7 +68,7 @@ function Shell() {
           <div className="rounded-lg bg-panel p-4">
             <div className="mb-4 flex items-center gap-2 px-2 text-accent">
               <Music2 size={22} className="fill-accent" />
-              <span className="font-black tracking-tight text-white">Saavn</span>
+              <span className="font-semibold tracking-tight text-white">Saavn</span>
             </div>
             <button className={navBtn(view.kind === 'home')} onClick={() => go({ kind: 'home' })}>
               <HomeIcon size={22} /> Home
@@ -79,7 +79,7 @@ function Shell() {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col rounded-lg bg-panel p-4">
-            <div className="mb-3 flex items-center gap-3 px-2 font-bold text-muted">
+            <div className="mb-3 flex items-center gap-3 px-2 font-medium text-muted">
               <Library size={22} /> Recently played
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">

@@ -98,7 +98,7 @@ export function Home({ go }: { go: (v: View) => void }) {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold tracking-tight">{greeting}</h1>
+      <h1 className="text-3xl leading-tight font-semibold tracking-tight">{greeting}</h1>
       {!data && <p className="mt-4 text-muted">Could not load the browse feed. Is the API running on :3001?</p>}
       {shelves
         .filter(([, items]) => items.length > 0)
@@ -132,7 +132,7 @@ export function Search({ query, go }: { query: string; go: (v: View) => void }) 
 
   return (
     <div className="p-6">
-      <h2 className="mb-2 px-3 text-2xl font-bold tracking-tight">Songs</h2>
+      <h2 className="mb-2 px-3 text-2xl font-semibold tracking-tight">Songs</h2>
       {data.songs.slice(0, 8).map((s, i) => (
         <SongRow key={s.id} song={s} n={i + 1} onPlay={() => play(data.songs, i)} />
       ))}
@@ -166,8 +166,8 @@ function Header({
       <div className="flex items-end gap-6 bg-gradient-to-b from-white/15 to-transparent p-6 pt-14">
         <img src={image} alt="" className={`size-52 shrink-0 object-cover shadow-2xl ${round ? 'rounded-full' : 'rounded'}`} />
         <div className="min-w-0 pb-2">
-          <div className="text-xs font-bold uppercase">{kind}</div>
-          <h1 className="mt-2 truncate text-6xl font-black tracking-tighter">{title}</h1>
+          <div className="text-xs font-medium tracking-wide uppercase">{kind}</div>
+          <h1 className="mt-2 truncate text-5xl leading-tight font-semibold tracking-tight">{title}</h1>
           <p className="mt-4 text-sm text-muted">{meta}</p>
         </div>
       </div>
@@ -249,7 +249,7 @@ export function ArtistPage({ id, go }: { id: string; go: (v: View) => void }) {
         onPlay={() => songs.length && play(songs, 0)}
       />
       <div className="px-3">
-        <h2 className="mb-2 px-3 text-2xl font-bold tracking-tight">Popular</h2>
+        <h2 className="mb-2 px-3 text-2xl font-semibold tracking-tight">Popular</h2>
         {trackList(songs, play)}
         {!!data.topAlbums?.length && (
           <div className="px-3">
