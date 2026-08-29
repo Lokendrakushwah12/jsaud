@@ -58,17 +58,48 @@ Interactive docs at `/docs`, OpenAPI spec at `/swagger`. All routes are under `/
 
 ## Deploying
 
-**API** — Vercel (`vercel.json` is configured, region `bom1`) or Cloudflare Workers
-(`bun run deploy`, via `wrangler.toml`). On Vercel the CDN honours the cache headers; on Workers
-only the in-process cache applies, since Workers do not cache their own responses without the
-Cache API.
+This repo holds **two deployables**, so it needs **two Vercel projects** pointed at the same
+repository. The only setting that differs is Root Directory.
 
-**Player** — any static host. `cd web && bun run build` emits `dist/`. Set `VITE_API_URL` to your
-API deployment unless both are served from one origin.
+### 1. The API
 
-One caveat worth knowing before you point traffic at it: JioSaavn rate-limits and WAF-blocks by IP,
-and datacenter ranges are what they flag first. A deployment can work locally and 403 from Vercel.
-The cache and retries are there to make that less likely, not to make it impossible.
+| Setting | Value |
+|---|---|
+| Root Directory | `./` (leave empty) |
+| Framework Preset | Other |
+| Build Command | `bun run build` (the default from `package.json`) |
+| Output Directory | `dist` |
+| Environment | none required |
+
+`vercel.json` rewrites every request to `/api`, which Vercel serves from `api/index.ts`, and pins
+execution to `bom1` (Mumbai) — the closest region to JioSaavn's own infrastructure.
+
+> Upstream commit `fc6bd13` deleted `api/index.ts` while leaving that rewrite in place, so a
+> deployment of upstream `main` has nothing to serve. This fork restores it. If you pull from
+> upstream again, check that the file survived.
+
+### 2. The player
+
+| Setting | Value |
+|---|---|
+| Root Directory | **`web`** |
+| Framework Preset | Vite (auto-detected) |
+| Build Command | `bun run build` |
+| Output Directory | `dist` |
+| Environment | `VITE_API_URL` = the API project's URL |
+
+Without `VITE_API_URL` the player calls `/api` on its own origin and every request 404s — the Vite
+proxy that makes this work locally does not exist in a production build.
+
+### Notes
+
+- `warn: Ignoring lockfile ... Unknown lockfile version` on Vercel is a **warning, not a failure**.
+  `web/bun.lock` is written by Bun 1.4 (`lockfileVersion: 2`) and Vercel's image ships Bun 1.3,
+  which resolves dependencies fresh instead. Delete `web/bun.lock` if you want the warning gone,
+  at the cost of pinned versions.
+- Cloudflare Workers is the other option for the API (`bun run deploy`, via `wrangler.toml`). Note
+  that Workers do not cache their own responses without the Cache API, so only the in-process cache
+  applies there — the `s-maxage` header does nothing.
 
 ## Tests
 
