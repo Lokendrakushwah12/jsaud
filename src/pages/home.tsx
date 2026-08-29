@@ -34,11 +34,11 @@ Home.get('/', (c) => {
         <meta charset="utf-8" />
         <meta name="description" content={description} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://saavn.dev/" />
+        <meta property="og:url" content="https://github.com/Lokendrakushwah12/jsaud" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://saavn.dev/" />
+        <meta property="twitter:url" content="https://github.com/Lokendrakushwah12/jsaud" />
         <meta property="twitter:title" content={title} />
         <meta property="twitter:description" content={description} />
         <meta
