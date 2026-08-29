@@ -1,19 +1,34 @@
-import { handle } from '@hono/node-server/vercel'
+import process from 'node:process'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-// Vercel turns every file under api/ into a serverless function, and vercel.json rewrites
-// all traffic here. Upstream deleted this file in fc6bd13, which left the rewrite pointing
-// at nothing.
+// Nothing is imported at module scope on purpose. Vercel answers a module-scope throw with
+// an opaque FUNCTION_INVOCATION_FAILED and no stack, so every import happens inside the
+// request where the error can be caught and returned instead.
 //
-// The app is imported lazily inside the request rather than at module scope: dist/ is built
-// output, so if it ever fails to resolve, a top-level import takes the whole function down
-// with an opaque FUNCTION_INVOCATION_FAILED and no stack. This way the error is returned.
+// GET /__fn answers without touching the app at all: if that responds, this file is live and
+// any failure is downstream of it; if it also 500s, the deployment is not running this code.
+const BUILD = 'lazy-imports-2'
+
 let handler: ((req: IncomingMessage, res: ServerResponse) => unknown) | undefined
 
 export default async function (req: IncomingMessage, res: ServerResponse) {
+  const send = (status: number, body: string) => {
+    res.statusCode = status
+    res.setHeader('content-type', 'text/plain; charset=utf-8')
+    res.end(body)
+  }
+
+  if (req.url?.startsWith('/__fn')) {
+    return send(200, `ok ${BUILD}\nnode ${process.version}\ncwd ${process.cwd()}`)
+  }
+
   try {
     if (!handler) {
-      const { default: app } = await import('../dist/server.js')
+      const [{ handle }, { default: app }] = await Promise.all([
+        import('@hono/node-server/vercel'),
+        import('../dist/server.js')
+      ])
+
       handler = handle(app as never)
     }
 
@@ -21,8 +36,6 @@ export default async function (req: IncomingMessage, res: ServerResponse) {
   } catch (error) {
     const detail = error instanceof Error ? (error.stack ?? error.message) : String(error)
 
-    res.statusCode = 500
-    res.setHeader('content-type', 'text/plain; charset=utf-8')
-    res.end(`failed to load the app from dist/\n\n${detail}`)
+    send(500, `[${BUILD}] failed to load the app\n\n${detail}`)
   }
 }
