@@ -1,27 +1,15 @@
-import process from 'node:process'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-// Nothing is imported at module scope on purpose. Vercel answers a module-scope throw with
-// an opaque FUNCTION_INVOCATION_FAILED and no stack, so every import happens inside the
-// request where the error can be caught and returned instead.
+// Vercel turns every file under api/ into a serverless function, and vercel.json rewrites
+// all traffic here. Upstream deleted this file in fc6bd13, which left the rewrite pointing
+// at nothing.
 //
-// GET /__fn answers without touching the app at all: if that responds, this file is live and
-// any failure is downstream of it; if it also 500s, the deployment is not running this code.
-const BUILD = 'lazy-imports-2'
-
+// The imports are lazy on purpose: dist/ is build output, and a module-scope import that
+// fails takes the whole function down with an opaque FUNCTION_INVOCATION_FAILED and no
+// stack. Inside the request, a failure is at least catchable.
 let handler: ((req: IncomingMessage, res: ServerResponse) => unknown) | undefined
 
 export default async function (req: IncomingMessage, res: ServerResponse) {
-  const send = (status: number, body: string) => {
-    res.statusCode = status
-    res.setHeader('content-type', 'text/plain; charset=utf-8')
-    res.end(body)
-  }
-
-  if (req.url?.startsWith('/__fn')) {
-    return send(200, `ok ${BUILD}\nnode ${process.version}\ncwd ${process.cwd()}`)
-  }
-
   try {
     if (!handler) {
       const [{ handle }, { default: app }] = await Promise.all([
@@ -33,9 +21,9 @@ export default async function (req: IncomingMessage, res: ServerResponse) {
     }
 
     return handler(req, res)
-  } catch (error) {
-    const detail = error instanceof Error ? (error.stack ?? error.message) : String(error)
-
-    send(500, `[${BUILD}] failed to load the app\n\n${detail}`)
+  } catch {
+    res.statusCode = 500
+    res.setHeader('content-type', 'application/json; charset=utf-8')
+    res.end(JSON.stringify({ success: false, message: 'the server failed to start' }))
   }
 }
