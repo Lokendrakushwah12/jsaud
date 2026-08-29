@@ -7,6 +7,10 @@ export default config(
       rules: {
         'import/no-default-export': 'off'
       }
+    },
+    {
+      // web/ is a separate Vite app with its own linter (oxlint) and React conventions.
+      ignores: ['web/**']
     }
   ],
   {
