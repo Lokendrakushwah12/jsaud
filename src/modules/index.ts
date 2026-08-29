@@ -1,3 +1,4 @@
+export * from './browse/controllers'
 export * from './albums/controllers'
 export * from './search/controllers'
 export * from './songs/controllers'
